@@ -21,7 +21,7 @@ def send_notification(to_email, subject, body):
     msg["From"] = smtp_user
     msg["To"] = to_email
     try:
-        with smtplib.SMTP_SSL(smtp_host, 465, timeout=10, source_address=("0.0.0.0", 0)) as server:
+        with smtplib.SMTP_SSL(smtp_host, 465, timeout=10) as server:
             server.login(smtp_user, smtp_pass)
             server.sendmail(smtp_user, [to_email], msg.as_string())
         return True
@@ -45,7 +45,7 @@ def send_reset_code(to_email, code):
     msg["To"] = to_email
 
     try:
-        with smtplib.SMTP_SSL(smtp_host, 465, timeout=10, source_address=("0.0.0.0", 0)) as server:
+        with smtplib.SMTP_SSL(smtp_host, 465, timeout=10) as server:
             server.login(smtp_user, smtp_pass)
             server.sendmail(smtp_user, [to_email], msg.as_string())
         return True

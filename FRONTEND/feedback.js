@@ -1,4 +1,4 @@
-fetch("http://127.0.0.1:5000/public-config")
+fetch("https://smartattendace.onrender.com/public-config")
   .then(r => r.json())
   .then(config => {
     if (!config.whatsapp_number) return;

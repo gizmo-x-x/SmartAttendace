@@ -48,7 +48,7 @@ submitAuthBtn.addEventListener("click", async function () {
   submitAuthBtn.textContent = "Please wait...";
 
   try {
-    const response = await fetch(`http://127.0.0.1:5000${endpoint}`, {
+    const response = await fetch(`https://smartattendace.onrender.com${endpoint}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -73,7 +73,7 @@ submitAuthBtn.addEventListener("click", async function () {
       }
     } else if (result.needs_verification) {
       showAuthMessage("Please verify your email. Sending a fresh code...", "error");
-      const resendResponse = await fetch("http://127.0.0.1:5000/resend-verification", {
+      const resendResponse = await fetch("https://smartattendace.onrender.com/resend-verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -98,7 +98,7 @@ document.getElementById("submitVerifyBtn").addEventListener("click", async funct
   const code = document.getElementById("verifyCodeInput").value.trim();
   if (!code) return alert("Please enter the code.");
 
-  const response = await fetch("http://127.0.0.1:5000/verify-email", {
+  const response = await fetch("https://smartattendace.onrender.com/verify-email", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${pendingVerifyToken}` },
     body: JSON.stringify({ code }),
@@ -119,7 +119,7 @@ document.getElementById("resendCodeLink").addEventListener("click", async functi
   if (!username || !password) {
     return alert("Please enter your username and password above first.");
   }
-  const response = await fetch("http://127.0.0.1:5000/resend-verification", {
+  const response = await fetch("https://smartattendace.onrender.com/resend-verification", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
@@ -144,7 +144,7 @@ document.getElementById("sendResetCodeBtn").addEventListener("click", async func
   if (!email) return alert("Please enter your email.");
   btn.disabled = true;
   btn.textContent = "Sending...";
-  await fetch("http://127.0.0.1:5000/request-password-reset", {
+  await fetch("https://smartattendace.onrender.com/request-password-reset", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
@@ -163,7 +163,7 @@ document.getElementById("submitResetBtn").addEventListener("click", async functi
   const code = document.getElementById("resetCodeInput").value.trim();
   const new_password = document.getElementById("newPasswordInput").value;
 
-  const response = await fetch("http://127.0.0.1:5000/reset-password", {
+  const response = await fetch("https://smartattendace.onrender.com/reset-password", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, code, new_password }),

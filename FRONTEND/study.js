@@ -1,5 +1,5 @@
 const TOKEN_S = localStorage.getItem("snapattend_token");
-const API_S = "http://127.0.0.1:5000";
+const API_S = "https://smartattendace.onrender.com";
 
 let lastExplanation = "";
 

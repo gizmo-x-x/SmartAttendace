@@ -5,7 +5,7 @@ document.getElementById("upgradeNowBtn").addEventListener("click", async functio
   if (!confirmed) return;
 
   try {
-    const response = await fetch("http://127.0.0.1:5000/upgrade", {
+    const response = await fetch("https://smartattendace.onrender.com/upgrade", {
       method: "POST",
       headers: { Authorization: `Bearer ${TOKEN_U}` },
     });

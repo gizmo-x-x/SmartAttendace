@@ -1,5 +1,5 @@
 const AUTH_TOKEN_D = localStorage.getItem("snapattend_token");
-const API_D = "http://127.0.0.1:5000";
+const API_D = "https://smartattendace.onrender.com";
 let userPlan = "basic";
 
 async function apiGet(path) {

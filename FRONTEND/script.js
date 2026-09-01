@@ -226,7 +226,7 @@ uploadBtn.addEventListener("click", async function () {
   uploadBtn.textContent = "Uploading & Analyzing...";
   aiStatusText.textContent = "Sending image to AI for extraction... this can take a few seconds.";
   try {
-    const response = await fetch("http://127.0.0.1:5000/upload", {
+    const response = await fetch("https://smartattendace.onrender.com/upload", {
       method: "POST",
        headers: {
     Authorization: `Bearer ${AUTH_TOKEN}`,
@@ -435,11 +435,10 @@ confirmBtn.addEventListener("click", async function () {
 
   confirmBtn.disabled = true;
   confirmBtn.textContent = "Confirming...";
-
-  try {
-    const response = await fetch("http://127.0.0.1:5000/confirm-attendance", {
+try {
+    const response = await fetch("https://smartattendace.onrender.com/confirm-attendance", {
       method: "POST",
-     headers: { "Content-Type": "application/json", Authorization: `Bearer ${AUTH_TOKEN}` },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${AUTH_TOKEN}` },
       body: JSON.stringify({
         students: students,
         config: currentConfig,
@@ -477,7 +476,7 @@ downloadPdfBtn.addEventListener("click", async function () {
   downloadPdfBtn.textContent = "Generating PDF...";
 
   try {
-    const response = await fetch("http://127.0.0.1:5000/export-pdf", {
+    const response = await fetch("https://smartattendace.onrender.com/export-pdf", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${AUTH_TOKEN}` },
       body: JSON.stringify({ students: students, config: currentConfig }),
@@ -520,7 +519,7 @@ downloadExcelBtn.addEventListener("click", async function () {
   downloadExcelBtn.textContent = "Generating Excel...";
 
   try {
-    const response = await fetch("http://127.0.0.1:5000/export-excel", {
+    const response = await fetch("https://smartattendace.onrender.com/export-excel", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${AUTH_TOKEN}` },
       body: JSON.stringify({ students: students, config: currentConfig }),
@@ -565,8 +564,8 @@ importPdfBtn.addEventListener("click", async function () {
   formData.append("pdf", file);
   importPdfBtn.disabled = true;
   importPdfBtn.textContent = "Loading PDF...";
-  try {
-    const response = await fetch("http://127.0.0.1:5000/import-pdf", {
+try {
+    const response = await fetch("https://smartattendace.onrender.com/import-pdf", {
       method: "POST",
       headers: { Authorization: `Bearer ${AUTH_TOKEN}` },
       body: formData,
@@ -764,8 +763,8 @@ document.addEventListener("DOMContentLoaded", function () {
 loggedInAs.textContent = `Logged in as: ${localStorage.getItem("snapattend_username") || "Unknown"}`;
 
 logoutBtn.addEventListener("click", async function () {
-  try {
-    await fetch("http://127.0.0.1:5000/logout", {
+try {
+    await fetch("https://smartattendace.onrender.com/logout", {
       method: "POST",
       headers: { Authorization: `Bearer ${AUTH_TOKEN}` },
     });
@@ -781,7 +780,7 @@ logoutBtn.addEventListener("click", async function () {
 async function loadHistory() {
   historyList.innerHTML = "Loading...";
   try {
-const response = await fetch("http://127.0.0.1:5000/attendance-history", {
+    const response = await fetch("https://smartattendace.onrender.com/attendance-history", {
       headers: { Authorization: `Bearer ${AUTH_TOKEN}` },
     });
     const result = await response.json();
@@ -805,7 +804,7 @@ const response = await fetch("http://127.0.0.1:5000/attendance-history", {
 
 async function loadHistoryDetail(sessionId) {
   try {
-  const response = await fetch(`http://127.0.0.1:5000/attendance-history/${sessionId}`, {
+  const response = await fetch(`https://smartattendace.onrender.com/attendance-history/${sessionId}`, {
       headers: { Authorization: `Bearer ${AUTH_TOKEN}` },
     });
     const details = await response.json();

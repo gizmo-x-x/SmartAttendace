@@ -1,5 +1,5 @@
 const TOKEN = localStorage.getItem("snapattend_token");
-const API = "http://127.0.0.1:5000";
+const API = "https://smartattendace.onrender.com";
 
 async function apiCall(path, options = {}) {
   options.headers = { ...(options.headers || {}), Authorization: `Bearer ${TOKEN}` };
