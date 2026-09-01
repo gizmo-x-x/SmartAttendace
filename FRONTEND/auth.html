@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SnapAttend — Log In</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="bg-overlay"></div>
+
+  <main class="container" style="max-width: 420px; margin-top: 4rem;">
+    <section class="upload-section glass-panel">
+      <h2 id="authTitle">Log In</h2>
+      <input type="email" id="emailInput" placeholder="Email" class="row-input" style="margin-bottom: 0.5rem;" />
+      <input type="text" id="usernameInput" placeholder="Username" class="row-input" style="margin-bottom: 0.5rem;" />
+      <input type="password" id="passwordInput" placeholder="Password" class="row-input" style="margin-bottom: 0.5rem;" />
+
+
+      <div id="planChoice" hidden style="margin-bottom: 1rem;">
+        <p><strong>Choose a plan</strong></p>
+        <label class="plan-card">
+          <input type="radio" name="plan" value="basic" checked>
+          <strong>SnapAttend Basic</strong> — Get your attendance organized.
+          <br><span class="plan-hint">Upload, AI extraction, review, Excel export, attendance history.</span>
+        </label>
+        <label class="plan-card">
+          <input type="radio" name="plan" value="premium">
+          <strong>SnapAttend Premium</strong> — Turn your attendance into a smarter study companion.
+          <br><span class="plan-hint">Everything in Basic, plus course outlines, AI study assistant, study progress, and email reminders.</span>
+        </label>
+      </div>
+      <button id="submitAuthBtn" type="button">Log In</button>
+      <p id="authMessage" class="message" hidden></p>
+
+      <p style="margin-top: 1rem;">
+        <span id="switchModeText">Don't have an account?</span>
+        <a href="#" id="switchModeLink">Register</a>
+      </p>
+      <div id="forgotPasswordFlow" hidden>
+        <h3>Reset Password</h3>
+        <input type="email" id="resetEmailInput" placeholder="Your email" class="row-input" style="margin-bottom:0.5rem;" />
+        <button id="sendResetCodeBtn" type="button">Send Reset Code</button>
+
+        <div id="resetStep2" hidden style="margin-top:0.75rem;">
+          <input type="text" id="resetCodeInput" placeholder="6-digit code" class="row-input" style="margin-bottom:0.5rem;" />
+          <input type="password" id="newPasswordInput" placeholder="New password" class="row-input" style="margin-bottom:0.5rem;" />
+          <button id="submitResetBtn" type="button">Reset Password</button>
+        </div>
+      </div>
+
+      <div id="emailVerifyFlow" hidden style="margin-top:1rem;">
+        <h3>Verify Your Email</h3>
+        <p>We sent a 6-digit code to your email.</p>
+        <input type="text" id="verifyCodeInput" placeholder="6-digit code" class="row-input" style="margin-bottom:0.5rem;">
+        <button id="submitVerifyBtn" type="button">Verify Email</button>
+        <p><a href="#" id="resendCodeLink">Resend code</a></p>
+      </div>
+
+      <p><a href="#" id="forgotPasswordLink">Forgot password?</a></p>
+
+      <div class="help-box">
+        <button type="button" id="toggleHelpBtn">ℹ️ How to log in / reset your password</button>
+        <div id="helpContent" hidden>
+          <ol>
+            <li>Type your <strong>username</strong> (not your email) and password. Click "Log In" <strong>once</strong> and wait — repeated clicks won't speed it up and may temporarily lock you out for a minute (max 5 tries/min).</li>
+            <li>Forgot your password? Click "Forgot password?" below and enter the <strong>email</strong> you registered with.</li>
+            <li>Click "Send Reset Code" once. A 6-digit code arrives by email within a minute (check spam if not). The code lasts 15 minutes and allows 5 attempts.</li>
+            <li>Enter the code and a new password (at least 8 characters, with both letters and numbers), then click "Reset Password" once.</li>
+            <li>Log in normally with your username and new password.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="auth.js"></script>
+  <script src="feedback.js"></script>
+</body>
+</html>

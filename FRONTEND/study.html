@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SnapAttend — AI Study Assistant</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <script>
+    if (!localStorage.getItem("snapattend_token")) window.location.href = "auth.html";
+  </script>
+  <div class="bg-overlay"></div>
+
+  <header class="site-header">
+    <h1 class="logo">📋 SnapAttend</h1>
+    <a href="dashboard.html"><button type="button">Back to Dashboard</button></a>
+  </header>
+
+  <main class="container">
+    <section class="glass-panel" style="padding:1.5rem;">
+      <h2>AI Study Assistant</h2>
+      <p><em>AI explanations may not always be fully correct — please verify against your course materials.</em></p>
+
+      <input type="text" id="courseNameField" placeholder="Course name (e.g. CSC 201)" class="row-input" style="margin-bottom:0.5rem;">
+      <input type="text" id="topicTitleField" placeholder="Topic (e.g. Recursion)" class="row-input" style="margin-bottom:0.5rem;">
+      <textarea id="topicDescField" placeholder="Topic description (optional)" class="row-input" style="margin-bottom:0.5rem;"></textarea>
+      <button id="analyzeBtn" type="button">Analyze Topic</button>
+
+      <div id="analysisResult" style="margin-top:1rem; white-space: pre-wrap;"></div>
+
+      <div id="followupSection" hidden style="margin-top:1rem;">
+        <h3>Ask a follow-up question</h3>
+        <input type="text" id="followupInput" placeholder="Type your question..." class="row-input" style="margin-bottom:0.5rem;">
+        <button id="followupBtn" type="button">Ask</button>
+        <div id="followupResult" style="margin-top:0.75rem; white-space: pre-wrap;"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="study.js"></script>
+  <script src="feedback.js"></script>
+</body>
+</html>

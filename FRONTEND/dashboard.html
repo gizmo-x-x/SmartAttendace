@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SnapAttend — Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <script>
+    if (!localStorage.getItem("snapattend_token")) window.location.href = "auth.html";
+  </script>
+
+  <div id="bgSlideshow" class="bg-slideshow">
+    <div class="bg-slide"></div><div class="bg-slide"></div><div class="bg-slide"></div>
+    <div class="bg-slide"></div><div class="bg-slide"></div><div class="bg-slide"></div>
+    <div class="bg-slide"></div>
+  </div>
+  <div id="customBgLayer" class="custom-bg-layer" hidden></div>
+  <div class="bg-overlay"></div>
+
+  <header class="site-header">
+    <h1 class="logo">📋 SnapAttend</h1>
+    <p id="loggedInAs"></p>
+    <button id="logoutBtn" type="button">Log Out</button>
+  </header>
+
+ <main class="container">
+    <section class="glass-panel" style="padding: 1.5rem;">
+      <h2 id="planBanner"></h2>
+      <div class="settings-group">
+        <a href="index.html"><button type="button">Go to Attendance (Upload / Review / Export)</button></a>
+      </div>
+    </section>
+
+    <section class="glass-panel" style="padding:1.5rem; margin-top:1rem;">
+      <h2>Subscription</h2>
+      <p id="subStatusText">Loading...</p>
+      <button id="subscribeBtn" type="button">Pay via Bank Transfer</button>
+      <button id="checkPaymentBtn" type="button">Check Payment Status</button>
+    </section>
+
+    <section class="glass-panel" style="padding:1.5rem; margin-top:1rem;">
+      <h2>Attendance Overview</h2>
+      <div id="attendanceByCourseList">Loading...</div>
+    </section>
+
+    <section class="glass-panel" style="padding:1.5rem; margin-top:1rem;">
+      <h2>Recent Attendance Records</h2>
+      <div id="recentHistoryList">Loading...</div>
+    </section>
+
+    <section class="glass-panel" style="padding:1.5rem; margin-top:1rem;">
+      <h2>
+        Course Study Planner
+        <span id="courseOutlineLock" class="premium-tag" hidden>— Premium</span>
+      </h2>
+      <button type="button" id="courseOutlineBtn">Open Course Outlines</button>
+    </section>
+
+    <section class="glass-panel" style="padding:1.5rem; margin-top:1rem;">
+      <h2>
+        AI Study Assistant
+        <span id="studyAssistantLock" class="premium-tag" hidden>— Premium</span>
+      </h2>
+      <button type="button" id="studyAssistantBtn">Open Study Assistant</button>
+    </section>
+
+    <section class="glass-panel" id="studyProgressSection" style="padding:1.5rem; margin-top:1rem;" hidden>
+      <h2>Study Progress</h2>
+      <div id="studyProgressList">Loading...</div>
+    </section>
+
+    <section class="glass-panel" style="padding:1.5rem; margin-top:1rem;">
+      <h2>Notification Settings</h2>
+      <label><input type="checkbox" id="attendanceEmailToggle"> Email me when attendance is confirmed</label><br>
+      <label><input type="checkbox" id="studyReminderToggle"> Email me study reminders</label><br>
+      <button id="saveNotifBtn" type="button">Save Settings</button>
+      <p id="notifMessage"></p>
+    </section>
+
+    <div id="upgradeBanner" class="upgrade-banner" hidden>
+      <h3>WHAT YOU GET WITH PREMIUM</h3>
+      <ul>
+        <li>Course outlines and topic organization</li>
+        <li>AI-powered topic analysis and study assistance</li>
+        <li>Study progress tracking</li>
+        <li>Smart email reminders (opt-in)</li>
+      </ul>
+      <button type="button" id="upgradeBtn">Upgrade to Premium</button>
+    </div>
+  </main>
+  <script src="script.js" defer></script>
+  <script src="dashboard.js" defer></script>
+  <script src="feedback.js"></script>
+</body>
+</html>

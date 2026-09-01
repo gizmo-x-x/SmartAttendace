@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SnapAttend — Upgrade to Premium</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <script>
+    if (!localStorage.getItem("snapattend_token")) window.location.href = "auth.html";
+  </script>
+  <div class="bg-overlay"></div>
+
+  <header class="site-header">
+    <h1 class="logo">📋 SnapAttend</h1>
+    <a href="dashboard.html"><button type="button">Back to Dashboard</button></a>
+  </header>
+
+  <main class="container">
+    <section class="glass-panel" style="padding:2rem; text-align:center;">
+      <h2>This feature requires SnapAttend Premium</h2>
+      <p>Turn your attendance into a smarter study companion.</p>
+
+      <div style="text-align:left; max-width:400px; margin:1.5rem auto;">
+        <h3>WHAT YOU GET WITH PREMIUM</h3>
+        <ul>
+          <li>Course outlines and topic organization</li>
+          <li>AI-powered topic analysis and study assistance</li>
+          <li>Study progress tracking</li>
+          <li>Smart email reminders (opt-in)</li>
+        </ul>
+      </div>
+
+      <button id="upgradeNowBtn" type="button">Upgrade to Premium</button>
+      <p id="upgradeMessage"></p>
+    </section>
+  </main>
+
+  <script src="upgrade.js"></script>
+  <script src="feedback.js"></script>
+</body>
+</html>

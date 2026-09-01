@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SnapAttend — Course Outlines</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <script>
+    if (!localStorage.getItem("snapattend_token")) window.location.href = "auth.html";
+  </script>
+  <div class="bg-overlay"></div>
+
+  <header class="site-header">
+    <h1 class="logo">📋 SnapAttend</h1>
+    <a href="dashboard.html"><button type="button">Back to Dashboard</button></a>
+  </header>
+
+  <main class="container">
+    <section class="glass-panel" style="padding:1.5rem;">
+      <h2>Add a Course</h2>
+      <input type="text" id="newCourseName" placeholder="Course name (e.g. Data Structures)" class="row-input" style="margin-bottom:0.5rem;">
+      <input type="text" id="newCourseCode" placeholder="Course code (e.g. CSC 201)" class="row-input" style="margin-bottom:0.5rem;">
+      <button id="addCourseBtn" type="button">Add Course</button>
+    </section>
+
+    <section class="glass-panel" style="padding:1.5rem; margin-top:1rem;">
+      <h2>Your Courses</h2>
+      <div id="coursesList"></div>
+    </section>
+  </main>
+
+  <script src="courses.js"></script>
+  <script src="feedback.js"></script>
+</body>
+</html>
