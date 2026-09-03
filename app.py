@@ -26,7 +26,12 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": ["null", "http://127.0.0.1:5500", "http://localhost:5500"]}})
+CORS(app, resources={r"/*": {"origins": [
+    "null",
+    "http://127.0.0.1:5500",
+    "http://localhost:5500",
+    "https://smartattendace-frontend.onrender.com"
+]}})
 limiter = Limiter(get_remote_address, app=app, default_limits=[])
 
 print("Flask is using this folder:", os.getcwd())
