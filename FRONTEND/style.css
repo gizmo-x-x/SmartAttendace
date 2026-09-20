@@ -345,13 +345,13 @@ body {
   opacity: 0;
   animation: bgSlideCycle 70s infinite ease-in-out;
 }
-.bg-slide:nth-child(1) { background-image: url('static/backgrounds/background-1.jpg'); animation-delay: 0s; }
-.bg-slide:nth-child(2) { background-image: url('static/backgrounds/background-2.jpg'); animation-delay: -10s; }
-.bg-slide:nth-child(3) { background-image: url('static/backgrounds/background-3.jpg'); animation-delay: -20s; }
-.bg-slide:nth-child(4) { background-image: url('static/backgrounds/background-4.jpg'); animation-delay: -30s; }
-.bg-slide:nth-child(5) { background-image: url('static/backgrounds/background-5.jpg'); animation-delay: -40s; }
-.bg-slide:nth-child(6) { background-image: url('static/backgrounds/background-6.jpg'); animation-delay: -50s; }
-.bg-slide:nth-child(7) { background-image: url('static/backgrounds/background-7.jpg'); animation-delay: -60s; }
+.bg-slide:nth-child(1) { background-image: url('static/Backgrounds/background-1.jpg'); animation-delay: 0s; }
+.bg-slide:nth-child(2) { background-image: url('static/Backgrounds/background-2.jpg'); animation-delay: -10s; }
+.bg-slide:nth-child(3) { background-image: url('static/Backgrounds/background-3.jpg'); animation-delay: -20s; }
+.bg-slide:nth-child(4) { background-image: url('static/Backgrounds/background-4.jpg'); animation-delay: -30s; }
+.bg-slide:nth-child(5) { background-image: url('static/Backgrounds/background-5.jpg'); animation-delay: -40s; }
+.bg-slide:nth-child(6) { background-image: url('static/Backgrounds/background-6.jpg'); animation-delay: -50s; }
+.bg-slide:nth-child(7) { background-image: url('static/Backgrounds/background-7.jpg'); animation-delay: -60s; }
 
 @keyframes bgSlideCycle {
   0%   { opacity: 0; transform: translateX(8%); }
