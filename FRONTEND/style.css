@@ -515,3 +515,18 @@ button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
+/* Make review buttons wrap on small screens */
+#reviewControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+#reviewControls[hidden] {
+  display: none;
+}
+
+#reviewControls button {
+  flex: 1 1 140px;
+}
