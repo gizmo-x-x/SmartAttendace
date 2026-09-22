@@ -1,6 +1,19 @@
 const TOKEN_S = localStorage.getItem("snapattend_token");
 const API_S = "https://smartattendace.onrender.com";
 
+function renderMath(el) {
+  if (window.renderMathInElement) {
+    renderMathInElement(el, {
+      delimiters: [
+        { left: "$$", right: "$$", display: true },
+        { left: "\\[", right: "\\]", display: true },
+        { left: "$", right: "$", display: false },
+        { left: "\\(", right: "\\)", display: false }
+      ]
+    });
+  }
+}
+
 let lastExplanation = "";
 
 document.getElementById("analyzeBtn").addEventListener("click", async function () {
@@ -24,6 +37,7 @@ document.getElementById("analyzeBtn").addEventListener("click", async function (
     const result = await response.json();
     if (response.ok) {
       resultBox.textContent = result.text;
+            renderMath(resultBox);
       lastExplanation = result.text;
       document.getElementById("followupSection").hidden = false;
     } else {
@@ -56,6 +70,7 @@ document.getElementById("followupBtn").addEventListener("click", async function 
     });
     const result = await response.json();
     resultBox.textContent = response.ok ? result.text : "Error: " + (result.error || "Could not get an answer.");
+        if (response.ok) renderMath(resultBox);
   } catch (err) {
     resultBox.textContent = "Could not reach the server.";
   }
