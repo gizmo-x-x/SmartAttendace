@@ -81,7 +81,7 @@ def create_user(username, password, plan="basic", email=""):
 
     password_hash = generate_password_hash(password)
     from datetime import datetime, timedelta
-    trial_end = (datetime.now() + timedelta(days=10)).isoformat()
+    trial_end = (datetime.now() + timedelta(days=30)).isoformat()
 
     cursor.execute(
         "INSERT INTO users (username, email, password_hash, plan, trial_end) VALUES (?, ?, ?, ?, ?)",
