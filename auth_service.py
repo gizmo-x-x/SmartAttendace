@@ -177,7 +177,7 @@ def get_user_id_from_token(token):
         return None
 
     created = datetime.fromisoformat(row["created_at"])
-    if datetime.now() - created > timedelta(days=7):
+    if datetime.now() - created > timedelta(days=3650):
         delete_token(token)
         return None
 
