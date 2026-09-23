@@ -35,8 +35,8 @@ CORS(app, resources={r"/*": {"origins": [
 limiter = Limiter(get_remote_address, app=app, default_limits=[])
 
 
-database.init_db()
 auth_service.init_auth_tables()
+database.init_db()
 
 UPLOAD_FOLDER = "uploads"
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png"}
