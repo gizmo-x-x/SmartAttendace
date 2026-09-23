@@ -1,23 +1,24 @@
 """
 database.py
 
-Handles all SQLite database setup and queries for SnapAttend.
+Handles all PostgreSQL (Supabase) database setup and queries for SnapAttend.
 This is the only file that talks to the database directly - every other
 file goes through the functions here instead of writing raw SQL itself.
 No API keys or secrets are ever stored here - only attendance data.
 """
 
-import sqlite3
+import os
 import json
 from datetime import datetime
 
-DB_PATH = "snapattend.db"
+import psycopg2
+import psycopg2.extras
+
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
 
 def get_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row  # lets us access columns by name, like a dictionary
-    conn.execute("PRAGMA foreign_keys = ON")
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
     return conn
 
 
@@ -29,7 +30,7 @@ def init_db():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS courses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             name TEXT NOT NULL UNIQUE
         )
     """)
@@ -44,7 +45,7 @@ def init_db():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS students (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             matric_no TEXT NOT NULL UNIQUE,
             fields TEXT NOT NULL
         )
@@ -52,7 +53,7 @@ def init_db():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS attendance_sessions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             course_id INTEGER NOT NULL,
             teacher_id INTEGER NOT NULL,
             confirmed_at TEXT NOT NULL,
@@ -64,7 +65,7 @@ def init_db():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS attendance_records (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             session_id INTEGER NOT NULL,
             student_id INTEGER NOT NULL,
             week INTEGER NOT NULL,
@@ -75,7 +76,7 @@ def init_db():
     """)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS course_outlines (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             user_id INTEGER NOT NULL,
             course_name TEXT NOT NULL,
             course_code TEXT,
@@ -92,7 +93,7 @@ def init_db():
     """)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS topics (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             course_outline_id INTEGER NOT NULL,
             week_label TEXT,
             title TEXT NOT NULL,
@@ -104,20 +105,22 @@ def init_db():
     """)
 
     conn.commit()
+    cursor.close()
     conn.close()
 
 
 def get_or_create_course(name):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id FROM courses WHERE name = ?", (name,))
+    cursor.execute("SELECT id FROM courses WHERE name = %s", (name,))
     row = cursor.fetchone()
     if row:
         course_id = row["id"]
     else:
-        cursor.execute("INSERT INTO courses (name) VALUES (?)", (name,))
+        cursor.execute("INSERT INTO courses (name) VALUES (%s) RETURNING id", (name,))
+        course_id = cursor.fetchone()["id"]
         conn.commit()
-        course_id = cursor.lastrowid
+    cursor.close()
     conn.close()
     return course_id
 
@@ -125,21 +128,22 @@ def get_or_create_course(name):
 def get_or_create_student(matric_no, fields_dict):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id FROM students WHERE matric_no = ?", (matric_no,))
+    cursor.execute("SELECT id FROM students WHERE matric_no = %s", (matric_no,))
     row = cursor.fetchone()
     fields_json = json.dumps(fields_dict)
     if row:
         student_id = row["id"]
         # Keep the student's stored details up to date with their latest info
-        cursor.execute("UPDATE students SET fields = ? WHERE id = ?", (fields_json, student_id))
+        cursor.execute("UPDATE students SET fields = %s WHERE id = %s", (fields_json, student_id))
         conn.commit()
     else:
         cursor.execute(
-            "INSERT INTO students (matric_no, fields) VALUES (?, ?)",
+            "INSERT INTO students (matric_no, fields) VALUES (%s, %s) RETURNING id",
             (matric_no, fields_json),
         )
+        student_id = cursor.fetchone()["id"]
         conn.commit()
-        student_id = cursor.lastrowid
+    cursor.close()
     conn.close()
     return student_id
 
@@ -153,11 +157,12 @@ def save_attendance_session(course_name, config, students, teacher_id):
     cursor = conn.cursor()
     confirmed_at = datetime.now().isoformat()
     cursor.execute(
-        "INSERT INTO attendance_sessions (course_id, teacher_id, confirmed_at, config) VALUES (?, ?, ?, ?)",
+        "INSERT INTO attendance_sessions (course_id, teacher_id, confirmed_at, config) VALUES (%s, %s, %s, %s) RETURNING id",
         (course_id, teacher_id, confirmed_at, json.dumps(config)),
     )
-    session_id = cursor.lastrowid
+    session_id = cursor.fetchone()["id"]
     conn.commit()
+    cursor.close()
     conn.close()
 
     for student in students:
@@ -168,10 +173,11 @@ def save_attendance_session(course_name, config, students, teacher_id):
         cursor = conn.cursor()
         for week_entry in student.get("weekly_attendance", []):
             cursor.execute(
-                "INSERT INTO attendance_records (session_id, student_id, week, status) VALUES (?, ?, ?, ?)",
+                "INSERT INTO attendance_records (session_id, student_id, week, status) VALUES (%s, %s, %s, %s)",
                 (session_id, student_id, week_entry["week"], week_entry["status"]),
             )
         conn.commit()
+        cursor.close()
         conn.close()
 
     return session_id
@@ -186,28 +192,31 @@ def get_all_sessions(teacher_id, page=1, per_page=20):
                (SELECT COUNT(DISTINCT student_id) FROM attendance_records WHERE session_id = s.id) AS student_count
         FROM attendance_sessions s
         JOIN courses c ON c.id = s.course_id
-        WHERE s.teacher_id = ?
+        WHERE s.teacher_id = %s
         ORDER BY s.confirmed_at DESC
-        LIMIT ? OFFSET ?
+        LIMIT %s OFFSET %s
     """, (teacher_id, per_page, offset))
     rows = cursor.fetchall()
+    cursor.close()
     conn.close()
     return [dict(row) for row in rows]
 
 def save_pending_payment(reference, user_id, expected_amount):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO pending_payments (reference, user_id, expected_amount) VALUES (?, ?, ?)",
+    cursor.execute("INSERT INTO pending_payments (reference, user_id, expected_amount) VALUES (%s, %s, %s)",
                    (reference, user_id, expected_amount))
     conn.commit()
+    cursor.close()
     conn.close()
 
 
 def get_expected_amount(reference):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT expected_amount FROM pending_payments WHERE reference = ?", (reference,))
+    cursor.execute("SELECT expected_amount FROM pending_payments WHERE reference = %s", (reference,))
     row = cursor.fetchone()
+    cursor.close()
     conn.close()
     return row["expected_amount"] if row else None
 
@@ -222,10 +231,11 @@ def get_session_details(session_id, teacher_id):
         SELECT s.id, s.confirmed_at, s.config, c.name AS course_name
         FROM attendance_sessions s
         JOIN courses c ON c.id = s.course_id
-        WHERE s.id = ? AND s.teacher_id = ?
+        WHERE s.id = %s AND s.teacher_id = %s
     """, (session_id, teacher_id))
     session_row = cursor.fetchone()
     if not session_row:
+        cursor.close()
         conn.close()
         return None
 
@@ -233,10 +243,11 @@ def get_session_details(session_id, teacher_id):
         SELECT st.matric_no, st.fields, ar.week, ar.status
         FROM attendance_records ar
         JOIN students st ON st.id = ar.student_id
-        WHERE ar.session_id = ?
+        WHERE ar.session_id = %s
         ORDER BY st.id, ar.week
     """, (session_id,))
     record_rows = cursor.fetchall()
+    cursor.close()
     conn.close()
 
     students_by_matric = {}
@@ -262,11 +273,12 @@ def add_course_outline(user_id, course_name, course_code):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO course_outlines (user_id, course_name, course_code) VALUES (?, ?, ?)",
+        "INSERT INTO course_outlines (user_id, course_name, course_code) VALUES (%s, %s, %s) RETURNING id",
         (user_id, course_name, course_code),
     )
+    new_id = cursor.fetchone()["id"]
     conn.commit()
-    new_id = cursor.lastrowid
+    cursor.close()
     conn.close()
     return new_id
 
@@ -274,8 +286,9 @@ def add_course_outline(user_id, course_name, course_code):
 def get_course_outlines(user_id):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM course_outlines WHERE user_id = ? ORDER BY id", (user_id,))
+    cursor.execute("SELECT * FROM course_outlines WHERE user_id = %s ORDER BY id", (user_id,))
     rows = [dict(r) for r in cursor.fetchall()]
+    cursor.close()
     conn.close()
     return rows
 
@@ -284,11 +297,12 @@ def update_course_outline(course_id, user_id, course_name, course_code):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "UPDATE course_outlines SET course_name = ?, course_code = ? WHERE id = ? AND user_id = ?",
+        "UPDATE course_outlines SET course_name = %s, course_code = %s WHERE id = %s AND user_id = %s",
         (course_name, course_code, course_id, user_id),
     )
     conn.commit()
     changed = cursor.rowcount
+    cursor.close()
     conn.close()
     return changed > 0
 
@@ -296,10 +310,11 @@ def update_course_outline(course_id, user_id, course_name, course_code):
 def delete_course_outline(course_id, user_id):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM topics WHERE course_outline_id = ?", (course_id,))
-    cursor.execute("DELETE FROM course_outlines WHERE id = ? AND user_id = ?", (course_id, user_id))
+    cursor.execute("DELETE FROM topics WHERE course_outline_id = %s", (course_id,))
+    cursor.execute("DELETE FROM course_outlines WHERE id = %s AND user_id = %s", (course_id, user_id))
     conn.commit()
     changed = cursor.rowcount
+    cursor.close()
     conn.close()
     return changed > 0
 
@@ -307,8 +322,9 @@ def delete_course_outline(course_id, user_id):
 def _course_belongs_to_user(course_id, user_id):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id FROM course_outlines WHERE id = ? AND user_id = ?", (course_id, user_id))
+    cursor.execute("SELECT id FROM course_outlines WHERE id = %s AND user_id = %s", (course_id, user_id))
     row = cursor.fetchone()
+    cursor.close()
     conn.close()
     return row is not None
 
@@ -319,11 +335,12 @@ def add_topic(course_id, user_id, week_label, title, description, materials):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO topics (course_outline_id, week_label, title, description, materials) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO topics (course_outline_id, week_label, title, description, materials) VALUES (%s, %s, %s, %s, %s) RETURNING id",
         (course_id, week_label, title, description, materials),
     )
+    new_id = cursor.fetchone()["id"]
     conn.commit()
-    new_id = cursor.lastrowid
+    cursor.close()
     conn.close()
     return new_id
 
@@ -337,11 +354,12 @@ def get_study_progress(user_id):
                SUM(CASE WHEN t.studied = 1 THEN 1 ELSE 0 END) AS completed_topics
         FROM course_outlines co
         LEFT JOIN topics t ON t.course_outline_id = co.id
-        WHERE co.user_id = ?
+        WHERE co.user_id = %s
         GROUP BY co.id
         ORDER BY co.id
     """, (user_id,))
     rows = [dict(r) for r in cursor.fetchall()]
+    cursor.close()
     conn.close()
     return rows
 
@@ -350,8 +368,9 @@ def get_topics(course_id, user_id):
         return []
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM topics WHERE course_outline_id = ? ORDER BY id", (course_id,))
+    cursor.execute("SELECT * FROM topics WHERE course_outline_id = %s ORDER BY id", (course_id,))
     rows = [dict(r) for r in cursor.fetchall()]
+    cursor.close()
     conn.close()
     return rows
 
@@ -360,11 +379,12 @@ def update_topic(topic_id, user_id, week_label, title, description, materials, s
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        UPDATE topics SET week_label = ?, title = ?, description = ?, materials = ?, studied = ?
-        WHERE id = ? AND course_outline_id IN (SELECT id FROM course_outlines WHERE user_id = ?)
+        UPDATE topics SET week_label = %s, title = %s, description = %s, materials = %s, studied = %s
+        WHERE id = %s AND course_outline_id IN (SELECT id FROM course_outlines WHERE user_id = %s)
     """, (week_label, title, description, materials, 1 if studied else 0, topic_id, user_id))
     conn.commit()
     changed = cursor.rowcount
+    cursor.close()
     conn.close()
     return changed > 0
 
@@ -373,11 +393,12 @@ def delete_topic(topic_id, user_id):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        DELETE FROM topics WHERE id = ? AND course_outline_id IN
-        (SELECT id FROM course_outlines WHERE user_id = ?)
+        DELETE FROM topics WHERE id = %s AND course_outline_id IN
+        (SELECT id FROM course_outlines WHERE user_id = %s)
     """, (topic_id, user_id))
     conn.commit()
     changed = cursor.rowcount
+    cursor.close()
     conn.close()
     return changed > 0
 def get_attendance_percentage_by_course(user_id):
@@ -389,9 +410,10 @@ def get_attendance_percentage_by_course(user_id):
         FROM attendance_records ar
         JOIN attendance_sessions s ON s.id = ar.session_id
         JOIN courses c ON c.id = s.course_id
-        WHERE s.teacher_id = ?
+        WHERE s.teacher_id = %s
     """, (user_id,))
     rows = cursor.fetchall()
+    cursor.close()
     conn.close()
 
     totals = {}
@@ -414,8 +436,9 @@ def get_attendance_percentage_by_course(user_id):
 def get_notification_settings(user_id):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM notification_settings WHERE user_id = ?", (user_id,))
+    cursor.execute("SELECT * FROM notification_settings WHERE user_id = %s", (user_id,))
     row = cursor.fetchone()
+    cursor.close()
     conn.close()
     if not row:
         return {"attendance_confirmed_emails": False, "study_reminder_emails": False}
@@ -430,10 +453,11 @@ def set_notification_settings(user_id, attendance_confirmed_emails, study_remind
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO notification_settings (user_id, attendance_confirmed_emails, study_reminder_emails)
-        VALUES (?, ?, ?)
-        ON CONFLICT(user_id) DO UPDATE SET
+        VALUES (%s, %s, %s)
+        ON CONFLICT (user_id) DO UPDATE SET
             attendance_confirmed_emails = excluded.attendance_confirmed_emails,
             study_reminder_emails = excluded.study_reminder_emails
     """, (user_id, int(attendance_confirmed_emails), int(study_reminder_emails)))
     conn.commit()
+    cursor.close()
     conn.close()

@@ -34,8 +34,7 @@ CORS(app, resources={r"/*": {"origins": [
 ]}})
 limiter = Limiter(get_remote_address, app=app, default_limits=[])
 
-print("Flask is using this folder:", os.getcwd())
-print("Full database path:", os.path.abspath("snapattend.db"))
+
 database.init_db()
 auth_service.init_auth_tables()
 

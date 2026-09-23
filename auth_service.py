@@ -5,16 +5,20 @@ Handles account creation, login verification, and session tokens.
 Passwords are NEVER stored in plain text - only a secure one-way hash.
 """
 
-import sqlite3
+import os
+import random
 import secrets
+from datetime import datetime, timedelta
+
+import psycopg2
+import psycopg2.extras
 from werkzeug.security import generate_password_hash, check_password_hash
 
-DB_PATH = "snapattend.db"
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
 
 def get_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
     return conn
 
 
@@ -23,7 +27,7 @@ def init_auth_tables():
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             username TEXT NOT NULL UNIQUE,
             email TEXT,
             password_hash TEXT NOT NULL,
@@ -38,7 +42,7 @@ def init_auth_tables():
     """)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS password_reset_codes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             user_id INTEGER NOT NULL,
             code TEXT NOT NULL,
             expires_at TEXT NOT NULL,
@@ -56,6 +60,7 @@ def init_auth_tables():
         )
     """)
     conn.commit()
+    cursor.close()
     conn.close()
 
 
@@ -74,21 +79,22 @@ def create_user(username, password, plan="basic", email=""):
 
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+    cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
     if cursor.fetchone():
+        cursor.close()
         conn.close()
         return None, "That username is already taken."
 
     password_hash = generate_password_hash(password)
-    from datetime import datetime, timedelta
     trial_end = (datetime.now() + timedelta(days=30)).isoformat()
 
     cursor.execute(
-        "INSERT INTO users (username, email, password_hash, plan, trial_end) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO users (username, email, password_hash, plan, trial_end) VALUES (%s, %s, %s, %s, %s) RETURNING id",
         (username, email.strip(), password_hash, plan, trial_end),
     )
+    user_id = cursor.fetchone()["id"]
     conn.commit()
-    user_id = cursor.lastrowid
+    cursor.close()
     conn.close()
     return user_id, None
 
@@ -96,8 +102,9 @@ def create_user(username, password, plan="basic", email=""):
 def get_user_email(user_id):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT email FROM users WHERE id = ?", (user_id,))
+    cursor.execute("SELECT email FROM users WHERE id = %s", (user_id,))
     row = cursor.fetchone()
+    cursor.close()
     conn.close()
     return row["email"] if row and row["email"] else None
 
@@ -106,8 +113,9 @@ def verify_login(username, password):
     """Checks credentials. Returns (user_id, error_message)."""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, password_hash FROM users WHERE username = ?", (username.strip(),))
+    cursor.execute("SELECT id, password_hash FROM users WHERE username = %s", (username.strip(),))
     row = cursor.fetchone()
+    cursor.close()
     conn.close()
 
     if not row or not check_password_hash(row["password_hash"], password):
@@ -121,9 +129,10 @@ def create_email_verification_code(user_id):
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO password_reset_codes (user_id, code, expires_at)
-        VALUES (?, ?, ?)
+        VALUES (%s, %s, %s)
     """, (user_id, "VERIFY-" + code, (datetime.now() + timedelta(hours=24)).isoformat()))
     conn.commit()
+    cursor.close()
     conn.close()
     return code
 
@@ -133,15 +142,17 @@ def verify_email_code(user_id, code):
     cursor = conn.cursor()
     cursor.execute("""
         SELECT id, expires_at FROM password_reset_codes
-        WHERE user_id = ? AND code = ? AND used = 0 ORDER BY id DESC LIMIT 1
+        WHERE user_id = %s AND code = %s AND used = 0 ORDER BY id DESC LIMIT 1
     """, (user_id, "VERIFY-" + code))
     row = cursor.fetchone()
     if not row or datetime.fromisoformat(row["expires_at"]) < datetime.now():
+        cursor.close()
         conn.close()
         return False
-    cursor.execute("UPDATE password_reset_codes SET used = 1 WHERE id = ?", (row["id"],))
-    cursor.execute("UPDATE users SET email_verified = 1 WHERE id = ?", (user_id,))
+    cursor.execute("UPDATE password_reset_codes SET used = 1 WHERE id = %s", (row["id"],))
+    cursor.execute("UPDATE users SET email_verified = 1 WHERE id = %s", (user_id,))
     conn.commit()
+    cursor.close()
     conn.close()
     return True
 
@@ -149,8 +160,9 @@ def verify_email_code(user_id, code):
 def is_email_verified(user_id):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT email_verified FROM users WHERE id = ?", (user_id,))
+    cursor.execute("SELECT email_verified FROM users WHERE id = %s", (user_id,))
     row = cursor.fetchone()
+    cursor.close()
     conn.close()
     return bool(row["email_verified"]) if row else False
 
@@ -159,8 +171,9 @@ def create_token(user_id):
     token = secrets.token_hex(32)
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO auth_tokens (token, user_id) VALUES (?, ?)", (token, user_id))
+    cursor.execute("INSERT INTO auth_tokens (token, user_id) VALUES (%s, %s)", (token, user_id))
     conn.commit()
+    cursor.close()
     conn.close()
     return token
 
@@ -170,8 +183,9 @@ def get_user_id_from_token(token):
         return None
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT user_id, created_at FROM auth_tokens WHERE token = ?", (token,))
+    cursor.execute("SELECT user_id, created_at FROM auth_tokens WHERE token = %s", (token,))
     row = cursor.fetchone()
+    cursor.close()
     conn.close()
     if not row:
         return None
@@ -187,8 +201,9 @@ def get_user_id_from_token(token):
 def get_username(user_id):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT username FROM users WHERE id = ?", (user_id,))
+    cursor.execute("SELECT username FROM users WHERE id = %s", (user_id,))
     row = cursor.fetchone()
+    cursor.close()
     conn.close()
     return row["username"] if row else None
 
@@ -196,8 +211,9 @@ def get_username(user_id):
 def get_user_plan(user_id):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT plan FROM users WHERE id = ?", (user_id,))
+    cursor.execute("SELECT plan FROM users WHERE id = %s", (user_id,))
     row = cursor.fetchone()
+    cursor.close()
     conn.close()
     return row["plan"] if row else "basic"
 
@@ -207,8 +223,9 @@ def set_user_plan(user_id, plan):
         return False
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("UPDATE users SET plan = ? WHERE id = ?", (plan, user_id))
+    cursor.execute("UPDATE users SET plan = %s WHERE id = %s", (plan, user_id))
     conn.commit()
+    cursor.close()
     conn.close()
     return True
 
@@ -216,19 +233,18 @@ def set_user_plan(user_id, plan):
 def delete_token(token):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM auth_tokens WHERE token = ?", (token,))
+    cursor.execute("DELETE FROM auth_tokens WHERE token = %s", (token,))
     conn.commit()
+    cursor.close()
     conn.close()
-
-import random
-from datetime import datetime, timedelta
 
 
 def get_user_by_email(email):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, username FROM users WHERE email = ?", (email.strip(),))
+    cursor.execute("SELECT id, username FROM users WHERE email = %s", (email.strip(),))
     row = cursor.fetchone()
+    cursor.close()
     conn.close()
     return dict(row) if row else None
 
@@ -239,10 +255,11 @@ def create_reset_code(user_id):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO password_reset_codes (user_id, code, expires_at) VALUES (?, ?, ?)",
+        "INSERT INTO password_reset_codes (user_id, code, expires_at) VALUES (%s, %s, %s)",
         (user_id, code, expires_at),
     )
     conn.commit()
+    cursor.close()
     conn.close()
     return code
 
@@ -256,34 +273,39 @@ def verify_reset_code(email, code):
     cursor = conn.cursor()
     cursor.execute("""
         SELECT id, expires_at, attempts FROM password_reset_codes
-        WHERE user_id = ? AND used = 0
+        WHERE user_id = %s AND used = 0
         ORDER BY id DESC LIMIT 1
     """, (user["id"],))
     row = cursor.fetchone()
 
     if not row:
+        cursor.close()
         conn.close()
         return None, "Invalid or already-used code."
 
     if row["attempts"] >= 5:
+        cursor.close()
         conn.close()
         return None, "Too many incorrect attempts. Please request a new code."
 
     if datetime.fromisoformat(row["expires_at"]) < datetime.now():
+        cursor.close()
         conn.close()
         return None, "This code has expired. Please request a new one."
 
-    cursor.execute("SELECT code FROM password_reset_codes WHERE id = ?", (row["id"],))
+    cursor.execute("SELECT code FROM password_reset_codes WHERE id = %s", (row["id"],))
     stored_code = cursor.fetchone()["code"]
 
     if stored_code != code:
-        cursor.execute("UPDATE password_reset_codes SET attempts = attempts + 1 WHERE id = ?", (row["id"],))
+        cursor.execute("UPDATE password_reset_codes SET attempts = attempts + 1 WHERE id = %s", (row["id"],))
         conn.commit()
+        cursor.close()
         conn.close()
         return None, "Incorrect code."
 
-    cursor.execute("UPDATE password_reset_codes SET used = 1 WHERE id = ?", (row["id"],))
+    cursor.execute("UPDATE password_reset_codes SET used = 1 WHERE id = %s", (row["id"],))
     conn.commit()
+    cursor.close()
     conn.close()
     return user["id"], None
 
@@ -296,18 +318,22 @@ def reset_password(user_id, new_password):
     password_hash = generate_password_hash(new_password)
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("UPDATE users SET password_hash = ? WHERE id = ?", (password_hash, user_id))
+    cursor.execute("UPDATE users SET password_hash = %s WHERE id = %s", (password_hash, user_id))
     conn.commit()
+    cursor.close()
     conn.close()
     return True, None
+
+
 def get_effective_plan(user_id):
     """Checks trial/subscription expiry, auto-downgrades if needed, returns the
     real current plan. This is the ONLY trusted source of plan status."""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT trial_end, subscription_status, subscription_end, plan FROM users WHERE id = ?", (user_id,))
+    cursor.execute("SELECT trial_end, subscription_status, subscription_end, plan FROM users WHERE id = %s", (user_id,))
     row = cursor.fetchone()
     if not row:
+        cursor.close()
         conn.close()
         return "basic"
 
@@ -320,9 +346,10 @@ def get_effective_plan(user_id):
         effective = "premium"
 
     if effective != row["plan"]:
-        cursor.execute("UPDATE users SET plan = ? WHERE id = ?", (effective, user_id))
+        cursor.execute("UPDATE users SET plan = %s WHERE id = %s", (effective, user_id))
         conn.commit()
 
+    cursor.close()
     conn.close()
     return effective
 
@@ -330,8 +357,9 @@ def get_effective_plan(user_id):
 def get_subscription_info(user_id):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT trial_end, subscription_status, subscription_end, first_payment_done FROM users WHERE id = ?", (user_id,))
+    cursor.execute("SELECT trial_end, subscription_status, subscription_end, first_payment_done FROM users WHERE id = %s", (user_id,))
     row = cursor.fetchone()
+    cursor.close()
     conn.close()
     return dict(row) if row else {}
 
@@ -339,7 +367,7 @@ def get_subscription_info(user_id):
 def record_successful_payment(user_id, reference):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT subscription_end, first_payment_done FROM users WHERE id = ?", (user_id,))
+    cursor.execute("SELECT subscription_end, first_payment_done FROM users WHERE id = %s", (user_id,))
     row = cursor.fetchone()
 
     now = datetime.now()
@@ -348,8 +376,9 @@ def record_successful_payment(user_id, reference):
     new_end = (start_from + timedelta(days=30)).isoformat()
 
     cursor.execute("""
-        UPDATE users SET subscription_status = 'active', subscription_end = ?,
-        first_payment_done = 1, plan = 'premium' WHERE id = ?
+        UPDATE users SET subscription_status = 'active', subscription_end = %s,
+        first_payment_done = 1, plan = 'premium' WHERE id = %s
     """, (new_end, user_id))
     conn.commit()
+    cursor.close()
     conn.close()
