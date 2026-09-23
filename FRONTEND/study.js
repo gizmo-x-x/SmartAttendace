@@ -14,6 +14,18 @@ function renderMath(el) {
   }
 }
 
+let bannerTimeout = null;
+
+function showBanner(message, type) {
+  const banner = document.getElementById("floatingBanner");
+  clearTimeout(bannerTimeout);
+  banner.textContent = message;
+  banner.className = type === "success" ? "success show" : "show";
+  bannerTimeout = setTimeout(() => {
+    banner.classList.remove("show");
+  }, 5000);
+}
+
 let lastExplanation = "";
 
 document.getElementById("analyzeBtn").addEventListener("click", async function () {
@@ -21,13 +33,17 @@ document.getElementById("analyzeBtn").addEventListener("click", async function (
   const topicTitle = document.getElementById("topicTitleField").value.trim();
   const topicDesc = document.getElementById("topicDescField").value.trim();
   const resultBox = document.getElementById("analysisResult");
+  const analyzeBtn = document.getElementById("analyzeBtn");
 
   if (!courseName || !topicTitle) {
-    alert("Please enter a course name and topic.");
+    showBanner("Please enter a course name and topic.", "error");
     return;
   }
 
+  analyzeBtn.disabled = true;
+  analyzeBtn.textContent = "Analyzing...";
   resultBox.textContent = "Analyzing...";
+
   try {
     const response = await fetch(`${API_S}/study-assistant/analyze`, {
       method: "POST",
@@ -37,14 +53,19 @@ document.getElementById("analyzeBtn").addEventListener("click", async function (
     const result = await response.json();
     if (response.ok) {
       resultBox.textContent = result.text;
-            renderMath(resultBox);
+      renderMath(resultBox);
       lastExplanation = result.text;
       document.getElementById("followupSection").hidden = false;
     } else {
-      resultBox.textContent = "Error: " + (result.error || "Could not analyze topic.");
+      resultBox.textContent = "";
+      showBanner(result.error || "Could not analyze topic. Please try again.", "error");
     }
   } catch (err) {
-    resultBox.textContent = "Could not reach the server.";
+    resultBox.textContent = "";
+    showBanner("Could not reach the server. Please try again.", "error");
+  } finally {
+    analyzeBtn.disabled = false;
+    analyzeBtn.textContent = "Analyze Topic";
   }
 });
 
@@ -53,10 +74,17 @@ document.getElementById("followupBtn").addEventListener("click", async function 
   const courseName = document.getElementById("courseNameField").value.trim();
   const topicTitle = document.getElementById("topicTitleField").value.trim();
   const resultBox = document.getElementById("followupResult");
+  const followupBtn = document.getElementById("followupBtn");
 
-  if (!question) return alert("Please type a question.");
+  if (!question) {
+    showBanner("Please type a question.", "error");
+    return;
+  }
 
+  followupBtn.disabled = true;
+  followupBtn.textContent = "Thinking...";
   resultBox.textContent = "Thinking...";
+
   try {
     const response = await fetch(`${API_S}/study-assistant/followup`, {
       method: "POST",
@@ -69,9 +97,18 @@ document.getElementById("followupBtn").addEventListener("click", async function 
       }),
     });
     const result = await response.json();
-    resultBox.textContent = response.ok ? result.text : "Error: " + (result.error || "Could not get an answer.");
-        if (response.ok) renderMath(resultBox);
+    if (response.ok) {
+      resultBox.textContent = result.text;
+      renderMath(resultBox);
+    } else {
+      resultBox.textContent = "";
+      showBanner(result.error || "Could not get an answer. Please try again.", "error");
+    }
   } catch (err) {
-    resultBox.textContent = "Could not reach the server.";
+    resultBox.textContent = "";
+    showBanner("Could not reach the server. Please try again.", "error");
+  } finally {
+    followupBtn.disabled = false;
+    followupBtn.textContent = "Ask";
   }
 });
