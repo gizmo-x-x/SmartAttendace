@@ -169,9 +169,10 @@ def is_email_verified(user_id):
 
 def create_token(user_id):
     token = secrets.token_hex(32)
+    created_at = datetime.now().isoformat()
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO auth_tokens (token, user_id) VALUES (%s, %s)", (token, user_id))
+    cursor.execute("INSERT INTO auth_tokens (token, user_id, created_at) VALUES (%s, %s, %s)", (token, user_id, created_at))
     conn.commit()
     cursor.close()
     conn.close()
