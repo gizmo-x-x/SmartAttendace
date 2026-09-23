@@ -1,15 +1,36 @@
 const AUTH_TOKEN_D = localStorage.getItem("snapattend_token");
 const API_D = "https://smartattendace.onrender.com";
 let userPlan = "basic";
+let meData = null;
 
 async function apiGet(path) {
-  const response = await fetch(API_D + path, { headers: { Authorization: `Bearer ${AUTH_TOKEN_D}` } });
-  return { ok: response.ok, data: await response.json().catch(() => ({})) };
+  try {
+    const response = await fetch(API_D + path, { headers: { Authorization: `Bearer ${AUTH_TOKEN_D}` } });
+    return { ok: response.ok, status: response.status, data: await response.json().catch(() => ({})) };
+  } catch (err) {
+    // Network error (e.g. backend waking up) — treat as a soft failure, not "logged out"
+    return { ok: false, status: 0, data: {} };
+  }
+}
+
+async function getMe() {
+  if (meData) return { ok: true, status: 200, data: meData };
+  const result = await apiGet("/me");
+  if (result.ok) meData = result.data;
+  return result;
 }
 
 async function loadDashboard() {
-  const { ok, data } = await apiGet("/me");
-  if (!ok) { window.location.href = "auth.html"; return; }
+  const result = await getMe();
+  if (!result.ok) {
+    // Only kick the user to login if the server actually said "unauthorized".
+    // Any other failure (network blip, backend waking up) just retries quietly.
+    if (result.status === 401 || result.status === 403) {
+      window.location.href = "auth.html";
+    }
+    return;
+  }
+  const data = result.data;
 
   userPlan = data.plan;
   localStorage.setItem("snapattend_plan", userPlan);
@@ -22,6 +43,7 @@ async function loadDashboard() {
   document.getElementById("studyAssistantLock").hidden = userPlan === "premium";
   document.getElementById("studyProgressSection").hidden = userPlan !== "premium";
 
+  loadSubscriptionStatus(data);
   loadAttendanceByCourse();
   loadRecentHistory();
   loadNotificationSettings();
@@ -96,13 +118,12 @@ document.getElementById("studyAssistantBtn").addEventListener("click", () => goT
 document.getElementById("upgradeBtn").addEventListener("click", async function () {
   if (!confirm("This is a placeholder for future payment integration. Upgrade to Premium now for free (testing)?")) return;
   const response = await fetch(API_D + "/upgrade", { method: "POST", headers: { Authorization: `Bearer ${AUTH_TOKEN_D}` } });
-  if (response.ok) { alert("Upgraded!"); loadDashboard(); }
+  if (response.ok) { meData = null; alert("Upgraded!"); loadDashboard(); }
 });
 
 document.addEventListener("DOMContentLoaded", loadDashboard);
 
-async function loadSubscriptionStatus() {
-  const { data } = { data: (await apiGet("/me")).data };
+function loadSubscriptionStatus(data) {
   const statusText = document.getElementById("subStatusText");
   if (data.plan === "premium" && data.trial_end && new Date(data.trial_end) > new Date()) {
     statusText.textContent = `Free trial active until ${new Date(data.trial_end).toLocaleDateString()}.`;
@@ -128,7 +149,6 @@ document.getElementById("subscribeBtn").addEventListener("click", async function
   }
 });
 
-loadSubscriptionStatus();
 document.getElementById("checkPaymentBtn").addEventListener("click", async function () {
   const ref = localStorage.getItem("snapattend_pending_ref");
   if (!ref) return alert("No pending payment found. Click 'Pay via Bank Transfer' first.");
@@ -137,5 +157,5 @@ document.getElementById("checkPaymentBtn").addEventListener("click", async funct
   });
   const result = await response.json();
   alert(result.message || result.error);
-  if (response.ok) { localStorage.removeItem("snapattend_pending_ref"); loadDashboard(); }
+  if (response.ok) { localStorage.removeItem("snapattend_pending_ref"); meData = null; loadDashboard(); }
 });
