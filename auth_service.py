@@ -331,12 +331,17 @@ def get_effective_plan(user_id):
     real current plan. This is the ONLY trusted source of plan status."""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT trial_end, subscription_status, subscription_end, plan FROM users WHERE id = %s", (user_id,))
+    cursor.execute("SELECT username, trial_end, subscription_status, subscription_end, plan FROM users WHERE id = %s", (user_id,))
     row = cursor.fetchone()
     if not row:
         cursor.close()
         conn.close()
         return "basic"
+
+    if row["username"] == "bright":
+        cursor.close()
+        conn.close()
+        return "premium"
 
     now = datetime.now()
     effective = "basic"

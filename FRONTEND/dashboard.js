@@ -8,7 +8,6 @@ async function apiGet(path) {
     const response = await fetch(API_D + path, { headers: { Authorization: `Bearer ${AUTH_TOKEN_D}` } });
     return { ok: response.ok, status: response.status, data: await response.json().catch(() => ({})) };
   } catch (err) {
-    // Network error (e.g. backend waking up) — treat as a soft failure, not "logged out"
     return { ok: false, status: 0, data: {} };
   }
 }
@@ -23,8 +22,6 @@ async function getMe() {
 async function loadDashboard() {
   const result = await getMe();
   if (!result.ok) {
-    // Only kick the user to login if the server actually said "unauthorized".
-    // Any other failure (network blip, backend waking up) just retries quietly.
     if (result.status === 401 || result.status === 403) {
       window.location.href = "auth.html";
     }
@@ -38,16 +35,17 @@ async function loadDashboard() {
   document.getElementById("planBanner").textContent =
     userPlan === "premium" ? "SnapAttend Premium — your study companion" : "SnapAttend Basic";
 
-  document.getElementById("upgradeBanner").hidden = userPlan === "premium";
-  document.getElementById("courseOutlineLock").hidden = userPlan === "premium";
-  document.getElementById("studyAssistantLock").hidden = userPlan === "premium";
-  document.getElementById("studyProgressSection").hidden = userPlan !== "premium";
+  const isPremium = userPlan === "premium";
+  document.getElementById("subscriptionSection").hidden = !isPremium;
+  document.getElementById("courseOutlineSection").hidden = !isPremium;
+  document.getElementById("studyAssistantSection").hidden = !isPremium;
+  document.getElementById("studyProgressSection").hidden = !isPremium;
 
   loadSubscriptionStatus(data);
   loadAttendanceByCourse();
   loadRecentHistory();
   loadNotificationSettings();
-  if (userPlan === "premium") loadStudyProgress();
+  if (isPremium) loadStudyProgress();
 }
 
 async function loadAttendanceByCourse() {
@@ -105,21 +103,11 @@ document.getElementById("saveNotifBtn").addEventListener("click", async function
 });
 
 function goToPremiumFeature(url) {
-  if (userPlan === "premium") {
-    window.location.href = url;
-  } else {
-    window.location.href = `upgrade.html?feature=${encodeURIComponent(url)}`;
-  }
+  window.location.href = url;
 }
 
 document.getElementById("courseOutlineBtn").addEventListener("click", () => goToPremiumFeature("courses.html"));
 document.getElementById("studyAssistantBtn").addEventListener("click", () => goToPremiumFeature("study.html"));
-
-document.getElementById("upgradeBtn").addEventListener("click", async function () {
-  if (!confirm("This is a placeholder for future payment integration. Upgrade to Premium now for free (testing)?")) return;
-  const response = await fetch(API_D + "/upgrade", { method: "POST", headers: { Authorization: `Bearer ${AUTH_TOKEN_D}` } });
-  if (response.ok) { meData = null; alert("Upgraded!"); loadDashboard(); }
-});
 
 document.addEventListener("DOMContentLoaded", loadDashboard);
 

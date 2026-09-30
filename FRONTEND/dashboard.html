@@ -35,7 +35,7 @@
       </div>
     </section>
 
-    <section class="glass-panel" style="padding:1.5rem; margin-top:1rem;">
+    <section class="glass-panel" id="subscriptionSection" style="padding:1.5rem; margin-top:1rem;" hidden>
       <h2>Subscription</h2>
       <p id="subStatusText">Loading...</p>
       <button id="subscribeBtn" type="button">Pay via Bank Transfer</button>
@@ -52,19 +52,13 @@
       <div id="recentHistoryList">Loading...</div>
     </section>
 
-    <section class="glass-panel" style="padding:1.5rem; margin-top:1rem;">
-      <h2>
-        Course Study Planner
-        <span id="courseOutlineLock" class="premium-tag" hidden>— Premium</span>
-      </h2>
+    <section class="glass-panel" id="courseOutlineSection" style="padding:1.5rem; margin-top:1rem;" hidden>
+      <h2>Course Study Planner</h2>
       <button type="button" id="courseOutlineBtn">Open Course Outlines</button>
     </section>
 
-    <section class="glass-panel" style="padding:1.5rem; margin-top:1rem;">
-      <h2>
-        AI Study Assistant
-        <span id="studyAssistantLock" class="premium-tag" hidden>— Premium</span>
-      </h2>
+    <section class="glass-panel" id="studyAssistantSection" style="padding:1.5rem; margin-top:1rem;" hidden>
+      <h2>AI Study Assistant</h2>
       <button type="button" id="studyAssistantBtn">Open Study Assistant</button>
     </section>
 
@@ -80,17 +74,6 @@
       <button id="saveNotifBtn" type="button">Save Settings</button>
       <p id="notifMessage"></p>
     </section>
-
-    <div id="upgradeBanner" class="upgrade-banner" hidden>
-      <h3>WHAT YOU GET WITH PREMIUM</h3>
-      <ul>
-        <li>Course outlines and topic organization</li>
-        <li>AI-powered topic analysis and study assistance</li>
-        <li>Study progress tracking</li>
-        <li>Smart email reminders (opt-in)</li>
-      </ul>
-      <button type="button" id="upgradeBtn">Upgrade to Premium</button>
-    </div>
   </main>
   <script src="script.js" defer></script>
   <script src="dashboard.js" defer></script>
