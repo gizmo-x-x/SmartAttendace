@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SnapAttend — Calculator</title>
+  <link rel="icon" type="image/png" href="gizmo-icon.png">
+  <link rel="stylesheet" href="style.css" />
+  <title>Scientific Calculator - SnapAttend</title>
+  <meta name="description" content="A full scientific calculator built into SnapAttend, with trigonometry, logarithms, memory, and more.">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
+
+  <style>
+    .calc-wrapper {
+      max-width: 420px;
+      margin: 1.5rem auto;
+      background: #1c1c1c;
+      border-radius: 14px;
+      padding: 1rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .calc-screen {
+      background: #cfe8cf;
+      border-radius: 8px;
+      padding: 0.75rem 0.9rem;
+      margin-bottom: 0.75rem;
+      font-family: "Courier New", monospace;
+      min-height: 70px;
+    }
+    #calcExpr {
+      font-size: 1rem;
+      color: #234023;
+      min-height: 1.3rem;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
+    #calcResult {
+      font-size: 1.6rem;
+      color: #0b1f0b;
+      text-align: right;
+      font-weight: bold;
+      min-height: 2rem;
+    }
+    .calc-status {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: #444;
+      margin-bottom: 0.25rem;
+    }
+    .calc-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.4rem;
+    }
+    .calc-grid button {
+      padding: 0.65rem 0.2rem;
+      font-size: 0.85rem;
+      border: none;
+      border-radius: 6px;
+      background: #333;
+      color: #fff;
+      cursor: pointer;
+    }
+    .calc-grid button:active {
+      background: #555;
+    }
+    .calc-grid button.op { background: #3a5a8a; }
+    .calc-grid button.func { background: #444; }
+    .calc-grid button.mem { background: #5a4a3a; }
+    .calc-grid button.eq { background: #2e7d32; grid-column: span 2; }
+    .calc-grid button.clear { background: #8a3a3a; }
+    .calc-grid button.mode-active { background: #b58900; color:#111; }
+  </style>
+</head>
+<body>
+  <script>
+    if (!localStorage.getItem("snapattend_token")) window.location.href = "auth.html";
+  </script>
+  <div class="bg-overlay"></div>
+
+  <header class="site-header">
+    <h1 class="logo">📋 SnapAttend</h1>
+    <a href="dashboard.html"><button type="button">Back to Dashboard</button></a>
+  </header>
+
+  <main class="container">
+    <div class="calc-wrapper">
+      <div class="calc-status">
+        <span id="angleModeLabel">DEG</span>
+        <span id="memoryIndicator"></span>
+      </div>
+      <div class="calc-screen">
+        <div id="calcExpr"></div>
+        <div id="calcResult">0</div>
+      </div>
+
+      <div class="calc-grid">
+        <button class="mode-active" id="angleModeBtn" type="button" data-action="toggleAngle">DEG</button>
+        <button class="mem" type="button" data-action="mc">MC</button>
+        <button class="mem" type="button" data-action="mr">MR</button>
+        <button class="mem" type="button" data-action="mPlus">M+</button>
+        <button class="mem" type="button" data-action="mMinus">M-</button>
+
+        <button class="func" type="button" data-append="sin(">sin</button>
+        <button class="func" type="button" data-append="cos(">cos</button>
+        <button class="func" type="button" data-append="tan(">tan</button>
+        <button class="func" type="button" data-append="^2">x²</button>
+        <button class="func" type="button" data-append="√(">√</button>
+
+        <button class="func" type="button" data-append="asin(">sin⁻¹</button>
+        <button class="func" type="button" data-append="acos(">cos⁻¹</button>
+        <button class="func" type="button" data-append="atan(">tan⁻¹</button>
+        <button class="func" type="button" data-append="^3">x³</button>
+        <button class="func" type="button" data-append="∛(">∛</button>
+
+        <button class="func" type="button" data-append="log(">log</button>
+        <button class="func" type="button" data-append="ln(">ln</button>
+        <button class="func" type="button" data-append="^(-1)">x⁻¹</button>
+        <button class="func" type="button" data-append="^">x^y</button>
+        <button class="func" type="button" data-append="!">n!</button>
+
+        <button class="func" type="button" data-append="nPr(">nPr</button>
+        <button class="func" type="button" data-append="nCr(">nCr</button>
+        <button class="func" type="button" data-append="π">π</button>
+        <button class="func" type="button" data-append="e">e</button>
+        <button class="func" type="button" data-append="i">i</button>
+
+        <button type="button" data-append="(">(</button>
+        <button type="button" data-append=")">)</button>
+        <button class="func" type="button" data-action="percent">%</button>
+        <button class="clear" type="button" data-action="del">DEL</button>
+        <button class="clear" type="button" data-action="ac">AC</button>
+
+        <button type="button" data-append="7">7</button>
+        <button type="button" data-append="8">8</button>
+        <button type="button" data-append="9">9</button>
+        <button class="op" type="button" data-append="×">×</button>
+        <button class="op" type="button" data-append="÷">÷</button>
+
+        <button type="button" data-append="4">4</button>
+        <button type="button" data-append="5">5</button>
+        <button type="button" data-append="6">6</button>
+        <button class="op" type="button" data-append="+">+</button>
+        <button class="op" type="button" data-append="-">-</button>
+
+        <button type="button" data-append="1">1</button>
+        <button type="button" data-append="2">2</button>
+        <button type="button" data-append="3">3</button>
+        <button class="func" type="button" data-action="toggleSign">+/-</button>
+        <button class="func" type="button" data-append="×10^(">×10ˣ</button>
+
+        <button type="button" data-append="0">0</button>
+        <button type="button" data-append=".">.</button>
+        <button class="func" type="button" data-append="Ans">Ans</button>
+        <button class="eq" type="button" data-action="equals">=</button>
+      </div>
+    </div>
+  </main>
+
+  <script src="calculator.js"></script>
+  <script src="global-toolbar.js"></script>
+  <script src="feedback.js"></script>
+</body>
+</html>
