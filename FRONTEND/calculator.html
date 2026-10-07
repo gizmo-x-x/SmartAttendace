@@ -10,66 +10,94 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
 
   <style>
-    .calc-wrapper {
-      max-width: 420px;
-      margin: 1.5rem auto;
-      background: #1c1c1c;
-      border-radius: 14px;
-      padding: 1rem;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    .calc-app {
+      max-width: 400px;
+      margin: 1.25rem auto;
+      background: #1c1c1e;
+      border-radius: 22px;
+      padding: 1.1rem;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.45);
+      font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
     }
-    .calc-screen {
-      background: #cfe8cf;
-      border-radius: 8px;
-      padding: 0.75rem 0.9rem;
-      margin-bottom: 0.75rem;
-      font-family: "Courier New", monospace;
-      min-height: 70px;
+
+    /* ---- Display ---- */
+    .calc-display {
+      padding: 1.4rem 1rem 1rem;
+      text-align: right;
     }
     #calcExpr {
-      font-size: 1rem;
-      color: #234023;
-      min-height: 1.3rem;
+      color: #9b9ba3;
+      font-size: 1.05rem;
+      min-height: 1.4rem;
       word-wrap: break-word;
-      white-space: pre-wrap;
     }
     #calcResult {
-      font-size: 1.6rem;
-      color: #0b1f0b;
-      text-align: right;
-      font-weight: bold;
-      min-height: 2rem;
+      color: #fff;
+      font-size: 2.6rem;
+      font-weight: 500;
+      min-height: 3rem;
+      word-wrap: break-word;
     }
     .calc-status {
       display: flex;
       justify-content: space-between;
-      font-size: 0.75rem;
-      color: #444;
-      margin-bottom: 0.25rem;
+      font-size: 0.7rem;
+      color: #6b6b70;
+      padding: 0 0.3rem;
     }
-    .calc-grid {
+
+    /* ---- Basic pad (always visible) ---- */
+    .basic-pad {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 0.4rem;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.6rem;
+      margin-top: 0.6rem;
     }
-    .calc-grid button {
-      padding: 0.65rem 0.2rem;
-      font-size: 0.85rem;
+    .basic-pad button, .sci-panel button {
       border: none;
-      border-radius: 6px;
-      background: #333;
-      color: #fff;
+      border-radius: 50%;
+      aspect-ratio: 1 / 1;
+      font-size: 1.15rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .basic-pad button.digit { background: #2c2c2e; color: #fff; }
+    .basic-pad button.util { background: #3a3a3c; color: #fff; font-size: 0.95rem; }
+    .basic-pad button.op { background: #3a5a8a; color: #fff; font-size: 1.3rem; }
+    .basic-pad button.eq { background: #2e7d32; color: #fff; font-size: 1.3rem; }
+    .basic-pad button:active, .sci-panel button:active { filter: brightness(1.3); }
+
+    /* ---- Scientific toggle ---- */
+    .sci-toggle-row { text-align: center; margin-top: 0.8rem; }
+    #sciToggleBtn {
+      background: none;
+      border: 1px solid #444;
+      color: #bbb;
+      border-radius: 20px;
+      padding: 0.4rem 1.1rem;
+      font-size: 0.85rem;
       cursor: pointer;
     }
-    .calc-grid button:active {
-      background: #555;
+
+    /* ---- Scientific panel (collapsible) ---- */
+    .sci-panel {
+      display: none;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.45rem;
+      margin-top: 0.8rem;
     }
-    .calc-grid button.op { background: #3a5a8a; }
-    .calc-grid button.func { background: #444; }
-    .calc-grid button.mem { background: #5a4a3a; }
-    .calc-grid button.eq { background: #2e7d32; grid-column: span 2; }
-    .calc-grid button.clear { background: #8a3a3a; }
-    .calc-grid button.mode-active { background: #b58900; color:#111; }
+    .sci-panel.open { display: grid; }
+    .sci-panel button {
+      border-radius: 10px;
+      font-size: 0.78rem;
+      padding: 0.5rem 0.1rem;
+      background: #2c2c2e;
+      color: #e0e0e0;
+    }
+    .sci-panel button.mem { background: #4a3a2c; }
+    .sci-panel button.mode-active { background: #b58900; color: #111; }
   </style>
 </head>
 <body>
@@ -84,75 +112,86 @@
   </header>
 
   <main class="container">
-    <div class="calc-wrapper">
+    <div class="calc-app">
       <div class="calc-status">
         <span id="angleModeLabel">DEG</span>
         <span id="memoryIndicator"></span>
       </div>
-      <div class="calc-screen">
+
+      <div class="calc-display">
         <div id="calcExpr"></div>
         <div id="calcResult">0</div>
       </div>
 
-      <div class="calc-grid">
-        <button class="mode-active" id="angleModeBtn" type="button" data-action="toggleAngle">DEG</button>
-        <button class="mem" type="button" data-action="mc">MC</button>
-        <button class="mem" type="button" data-action="mr">MR</button>
-        <button class="mem" type="button" data-action="mPlus">M+</button>
-        <button class="mem" type="button" data-action="mMinus">M-</button>
+      <div id="calcButtons">
+        <div class="basic-pad">
+          <button class="util" type="button" data-action="ac">AC</button>
+          <button class="util" type="button" data-action="del">⌫</button>
+          <button class="util" type="button" data-action="percent">%</button>
+          <button class="op" type="button" data-append="÷">÷</button>
 
-        <button class="func" type="button" data-append="sin(">sin</button>
-        <button class="func" type="button" data-append="cos(">cos</button>
-        <button class="func" type="button" data-append="tan(">tan</button>
-        <button class="func" type="button" data-append="^2">x²</button>
-        <button class="func" type="button" data-append="√(">√</button>
+          <button class="digit" type="button" data-append="7">7</button>
+          <button class="digit" type="button" data-append="8">8</button>
+          <button class="digit" type="button" data-append="9">9</button>
+          <button class="op" type="button" data-append="×">×</button>
 
-        <button class="func" type="button" data-append="asin(">sin⁻¹</button>
-        <button class="func" type="button" data-append="acos(">cos⁻¹</button>
-        <button class="func" type="button" data-append="atan(">tan⁻¹</button>
-        <button class="func" type="button" data-append="^3">x³</button>
-        <button class="func" type="button" data-append="∛(">∛</button>
+          <button class="digit" type="button" data-append="4">4</button>
+          <button class="digit" type="button" data-append="5">5</button>
+          <button class="digit" type="button" data-append="6">6</button>
+          <button class="op" type="button" data-append="-">−</button>
 
-        <button class="func" type="button" data-append="log(">log</button>
-        <button class="func" type="button" data-append="ln(">ln</button>
-        <button class="func" type="button" data-append="^(-1)">x⁻¹</button>
-        <button class="func" type="button" data-append="^">x^y</button>
-        <button class="func" type="button" data-append="!">n!</button>
+          <button class="digit" type="button" data-append="1">1</button>
+          <button class="digit" type="button" data-append="2">2</button>
+          <button class="digit" type="button" data-append="3">3</button>
+          <button class="op" type="button" data-append="+">+</button>
 
-        <button class="func" type="button" data-append="nPr(">nPr</button>
-        <button class="func" type="button" data-append="nCr(">nCr</button>
-        <button class="func" type="button" data-append="π">π</button>
-        <button class="func" type="button" data-append="e">e</button>
-        <button class="func" type="button" data-append="i">i</button>
+          <button class="util" type="button" data-action="toggleSign">+/-</button>
+          <button class="digit" type="button" data-append="0">0</button>
+          <button class="digit" type="button" data-append=".">.</button>
+          <button class="eq" type="button" data-action="equals">=</button>
+        </div>
 
-        <button type="button" data-append="(">(</button>
-        <button type="button" data-append=")">)</button>
-        <button class="func" type="button" data-action="percent">%</button>
-        <button class="clear" type="button" data-action="del">DEL</button>
-        <button class="clear" type="button" data-action="ac">AC</button>
+        <div class="sci-toggle-row">
+          <button type="button" id="sciToggleBtn">🔬 Scientific functions</button>
+        </div>
 
-        <button type="button" data-append="7">7</button>
-        <button type="button" data-append="8">8</button>
-        <button type="button" data-append="9">9</button>
-        <button class="op" type="button" data-append="×">×</button>
-        <button class="op" type="button" data-append="÷">÷</button>
+        <div class="sci-panel" id="sciPanel">
+          <button class="mode-active" id="angleModeBtn" type="button" data-action="toggleAngle">DEG</button>
+          <button class="mem" type="button" data-action="mc">MC</button>
+          <button class="mem" type="button" data-action="mr">MR</button>
+          <button class="mem" type="button" data-action="mPlus">M+</button>
+          <button class="mem" type="button" data-action="mMinus">M-</button>
 
-        <button type="button" data-append="4">4</button>
-        <button type="button" data-append="5">5</button>
-        <button type="button" data-append="6">6</button>
-        <button class="op" type="button" data-append="+">+</button>
-        <button class="op" type="button" data-append="-">-</button>
+          <button type="button" data-append="sin(">sin</button>
+          <button type="button" data-append="cos(">cos</button>
+          <button type="button" data-append="tan(">tan</button>
+          <button type="button" data-append="^2">x²</button>
+          <button type="button" data-append="√(">√</button>
 
-        <button type="button" data-append="1">1</button>
-        <button type="button" data-append="2">2</button>
-        <button type="button" data-append="3">3</button>
-        <button class="func" type="button" data-action="toggleSign">+/-</button>
-        <button class="func" type="button" data-append="×10^(">×10ˣ</button>
+          <button type="button" data-append="asin(">sin⁻¹</button>
+          <button type="button" data-append="acos(">cos⁻¹</button>
+          <button type="button" data-append="atan(">tan⁻¹</button>
+          <button type="button" data-append="^3">x³</button>
+          <button type="button" data-append="∛(">∛</button>
 
-        <button type="button" data-append="0">0</button>
-        <button type="button" data-append=".">.</button>
-        <button class="func" type="button" data-append="Ans">Ans</button>
-        <button class="eq" type="button" data-action="equals">=</button>
+          <button type="button" data-append="log(">log</button>
+          <button type="button" data-append="ln(">ln</button>
+          <button type="button" data-append="^(-1)">x⁻¹</button>
+          <button type="button" data-append="^">x^y</button>
+          <button type="button" data-append="!">n!</button>
+
+          <button type="button" data-append="nPr(">nPr</button>
+          <button type="button" data-append="nCr(">nCr</button>
+          <button type="button" data-append="π">π</button>
+          <button type="button" data-append="e">e</button>
+          <button type="button" data-append="i">i</button>
+
+          <button type="button" data-append="(">(</button>
+          <button type="button" data-append=")">)</button>
+          <button type="button" data-append="×10^(">×10ˣ</button>
+          <button type="button" data-append="Ans">Ans</button>
+          <button type="button" data-action="noop" style="visibility:hidden;"></button>
+        </div>
       </div>
     </div>
   </main>

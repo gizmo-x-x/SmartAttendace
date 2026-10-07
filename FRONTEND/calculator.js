@@ -62,9 +62,18 @@ function formatResult(result) {
   return calcMath.format(result, { precision: 10 });
 }
 
+// ---------- SCIENTIFIC PANEL TOGGLE ----------
+
+document.getElementById("sciToggleBtn").addEventListener("click", () => {
+  const panel = document.getElementById("sciPanel");
+  const btn = document.getElementById("sciToggleBtn");
+  panel.classList.toggle("open");
+  btn.textContent = panel.classList.contains("open") ? "🔼 Hide scientific functions" : "🔬 Scientific functions";
+});
+
 // ---------- BUTTON HANDLING ----------
 
-document.querySelectorAll(".calc-grid button").forEach((btn) => {
+document.querySelectorAll("#calcButtons button").forEach((btn) => {
   btn.addEventListener("click", () => {
     const appendValue = btn.dataset.append;
     const action = btn.dataset.action;
