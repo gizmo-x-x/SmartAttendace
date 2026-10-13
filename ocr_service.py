@@ -8,12 +8,15 @@ table configuration (number of weeks, column names) instead of being fixed.
 
 import os
 import json
+import time
 from google import genai
 from google.genai import types
 
 client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 MODEL_NAME = "gemini-3.6-flash"
+MAX_RETRIES = 3
+RETRY_DELAY_SECONDS = 2  # doubles each attempt: 2s, 4s, 8s
 
 DEFAULT_CONFIG = {
     "numWeeks": 14,
@@ -84,6 +87,24 @@ def _get_media_type(file_path):
     raise ValueError(f"Unsupported file type: {extension}")
 
 
+def _call_gemini_with_retry(file_part, prompt):
+    """Calls Gemini, automatically retrying a few times if the model is
+    temporarily overloaded (503) or another transient error occurs."""
+    last_error = None
+    for attempt in range(MAX_RETRIES):
+        try:
+            return client.models.generate_content(
+                model=MODEL_NAME,
+                contents=[file_part, prompt],
+            ), None
+        except Exception as e:
+            last_error = e
+            is_last_attempt = attempt == MAX_RETRIES - 1
+            if not is_last_attempt:
+                time.sleep(RETRY_DELAY_SECONDS * (2 ** attempt))
+    return None, last_error
+
+
 def extract_attendance_data(file_path, config=None):
     """Sends the image/PDF to Gemini and asks it to extract structured
     attendance data, using the teacher's chosen table configuration."""
@@ -105,14 +126,10 @@ def extract_attendance_data(file_path, config=None):
     file_part = types.Part.from_bytes(data=file_bytes, mime_type=media_type)
     prompt = build_extraction_prompt(config)
 
-    try:
-        response = client.models.generate_content(
-            model=MODEL_NAME,
-            contents=[file_part, prompt],
-        )
-    except Exception as e:
+    response, error = _call_gemini_with_retry(file_part, prompt)
+    if error is not None:
         return {"success": False, "data": None, "raw_text": None,
-                "error": f"AI request failed: {e}"}
+                "error": f"AI request failed after {MAX_RETRIES} attempts: {error}"}
 
     raw_text = response.text or ""
     cleaned_text = raw_text.strip()
