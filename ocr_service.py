@@ -14,7 +14,7 @@ from google.genai import types
 
 client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
-MODEL_NAME = "gemini-3.6-flash"
+MODEL_NAME = "gemini-2.5-flash"
 MAX_RETRIES = 3
 RETRY_DELAY_SECONDS = 2  # doubles each attempt: 2s, 4s, 8s
 
